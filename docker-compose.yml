@@ -1,0 +1,65 @@
+version: "3.7"
+
+services:
+  pgdb:
+    image: postgres:latest
+    build:
+      context: ./Docker
+      dockerfile: Dockerfile
+    restart: always
+    container_name: pgdb
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "qaninja"
+      POSTGRES_DB: "ninjapixel"
+    ports:
+      - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./Docker/init-user-db.sh:/usr/local/bin/docker-entrypoint-initdb.d
+    networks:
+      - skynet
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "root@qaninja.io"
+      PGADMIN_DEFAULT_PASSWORD: "qaninja"
+    ports:
+      - "15432:80"
+    depends_on:
+      - pgdb
+    volumes:
+      - ./Pgadmin/servers.json:/pgadmin4/servers.json
+      - pgadmin:/pgadmin4
+    networks:
+      - skynet
+  pixel-api:
+    image: qaninja/pixel-api
+    container_name: pixel-api
+    environment:
+      DATABASE: "pgdb"
+    ports:
+      - "3333:3333"
+    depends_on:
+      - pgdb
+    networks:
+      - skynet
+  pixel-web:
+    image: qaninja/pixel-web
+    container_name: pixel-web
+    environment:
+      VUE_APP_API: "http://pixel-api:3333"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - pixel-api
+    networks:
+      - skynet
+networks:
+  skynet:
+    driver: bridge
+volumes:
+  data:
+  pgadmin:
